@@ -21,6 +21,7 @@ import androidx.tv.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,12 +57,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(mainActivityViewMode: MainActivityViewMode = hiltViewModel()) {
     val navController = rememberNavController()
-    val token = mainActivityViewMode.token.observeAsState()
-    val destination = if (token.value == "") "home" else "adsPlayCompose"
     val activationResponse = mainActivityViewMode.activationResponse.collectAsState()
     NavHost(
         navController = navController,
-        startDestination = destination
+        startDestination = "decider"
     ) {
         composable("home") {
             HomeScreen(
@@ -75,6 +74,28 @@ fun AppNavigation(mainActivityViewMode: MainActivityViewMode = hiltViewModel()) 
         composable("adsPlayCompose") {
             AdsPlayCompose()
         }
+        composable("decider") {
+            val token by mainActivityViewMode.token.observeAsState()
+
+            LaunchedEffect(token) {
+                when {
+                    token == null -> {
+                        // Do nothing, still loading DataStore
+                    }
+                    token.isNullOrEmpty() -> {
+                        navController.navigate("home") {
+                            popUpTo("decider") { inclusive = true }
+                        }
+                    }
+                    else -> {
+                        navController.navigate("adsPlayCompose") {
+                            popUpTo("decider") { inclusive = true }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }
 
