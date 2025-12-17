@@ -1,0 +1,4 @@
+<resources>
+
+    <style name="Theme.Firestickappnative" parent="Theme.AppCompat.DayNight.NoActionBar" />
+</resources>
