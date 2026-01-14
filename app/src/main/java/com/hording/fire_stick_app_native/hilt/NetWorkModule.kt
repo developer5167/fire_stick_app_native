@@ -6,8 +6,11 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.hording.fire_stick_app_native.Constants
+import com.hording.fire_stick_app_native.WebSocketManager
 import com.hording.fire_stick_app_native.netWork.ApiService
 import com.hording.fire_stick_app_native.netWork.AuthInterceptor
+import com.hording.fire_stick_app_native.repository.DeviceDetailsRepository
+import com.hording.fire_stick_app_native.repository.FetchAdsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -78,6 +81,22 @@ object NetWorkModule {
             .build()
 
     }
+    @Provides
+    @Singleton
+    fun getWebSocketManager(fetchAdsRepository: FetchAdsRepository, deviceDetailsRepository: DeviceDetailsRepository): WebSocketManager {
+        return WebSocketManager(fetchAdsRepository = fetchAdsRepository, deviceDetailsRepository =deviceDetailsRepository )
+    }
+    @Provides
+    @Singleton
+    fun getAdsRepository(apiService: ApiService): FetchAdsRepository {
+        return FetchAdsRepository(apiService = apiService )
+    }
+    @Provides
+    @Singleton
+    fun getDeviceDetailsRepository(dataStore: DataStore<Preferences>): DeviceDetailsRepository {
+        return DeviceDetailsRepository(dataStore = dataStore )
+    }
+
 
 
 }

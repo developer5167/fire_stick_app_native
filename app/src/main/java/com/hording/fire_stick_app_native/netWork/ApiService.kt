@@ -24,7 +24,7 @@ interface ApiService {
     @GET("/tvApp/company-ads")
     suspend fun fetCompanyAds(): AdsModel
 
-    @GET("admin/emergency-ads/devices/{deviceId}")
+    @GET("/tvApp/emergency-ads/devices/{deviceId}")
     suspend fun fetchEmergencyAds(@Path("deviceId") deviceId: String): AdsModel
 
     @GET("/tvApp/device/status")

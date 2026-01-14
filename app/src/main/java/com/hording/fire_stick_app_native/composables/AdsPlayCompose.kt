@@ -16,58 +16,39 @@ fun AdsPlayCompose(adsPlayViewModel: AdsPlayViewModel = hiltViewModel()) {
 
     println("STATE>>>:  ${status.value}")
 
-
-
-
-    LaunchedEffect(Unit) {
+    LaunchedEffect(status.value) {
         adsPlayViewModel.fetchMainAds()
         adsPlayViewModel.fetchCompanyAds()
         adsPlayViewModel.fetchEmergencyAds()
     }
-        when (status.value) {
-            SocketListenerStatus.EmergencyMode -> {
-                println("STATE>>>:  ${status.value}  ${emergencyAds.value}")
-                EmergencyAdsHandler(emergencyAds)
-            }
-            SocketListenerStatus.MaintenanceMode -> {
-                StatusTextScreen("Device under maintenance")
-            }
-            SocketListenerStatus.OfflineMode -> {
-                StatusTextScreen("Device is offline")
-            }
-            SocketListenerStatus.ActiveMode -> {
-                ActiveAdsHandler(
-                    mainAdsState = mainAdsState.value,
-                    companyAdsState = companyAdsState.value,
-                    onFetchMainAds = { adsPlayViewModel.fetchMainAds() }
-                )
-            }
+    when (status.value) {
+
+        SocketListenerStatus.EmergencyMode -> {
+            println("STATE>>>:  ${status.value}  ${emergencyAds.value}")
+            EmergencyAdsHandler(emergencyAds)
+        }
+
+        SocketListenerStatus.MaintenanceMode -> {
+            StatusTextScreen("Device under maintenance")
+        }
+
+        SocketListenerStatus.OfflineMode -> {
+            StatusTextScreen("Device is offline")
+        }
+
+        SocketListenerStatus.Blocked -> {
+            StatusTextScreen("Account is Blocked")
+        }
+        SocketListenerStatus.ActiveMode -> {
+            ActiveAdsHandler(
+                mainAdsState = mainAdsState.value,
+                companyAdsState = companyAdsState.value,
+                onFetchMainAds = { adsPlayViewModel.fetchMainAds() }
+            )
+        }
+
+        SocketListenerStatus.Loading -> {
+            LoadingScreen()
+        }
     }
-
-
-
-//    when {
-//        mainAdsState.value is ApiResponse.Success && (mainAdsState.value as ApiResponse.Success<MainAdsModel>).data.ads.isNotEmpty() -> {
-//            PlayMainAds(
-//                mainAds = (mainAdsState.value as ApiResponse.Success<MainAdsModel>).data.ads,
-//                companyAds = (companyAdsState.value as ApiResponse.Success<AdsModel>).data.data,
-//                onLoopCompleted = {
-//                    adsPlayViewModel.fetchMainAds() // fetch main ads after loop
-//                }
-//            )
-//        }
-//
-//        companyAdsState.value is ApiResponse.Success &&
-//                (companyAdsState.value as ApiResponse.Success<AdsModel>).data.data.isNotEmpty() -> {
-//            PlayCompanyAds(
-//                ads = (companyAdsState.value as ApiResponse.Success<AdsModel>).data.data,
-//                onLoopCompleted = {
-//                    adsPlayViewModel.fetchMainAds() // try fetching main ads again
-//                }
-//            )
-//        }
-//
-//        else -> NoAdsFoundScreen()
-//
-//    }
 }

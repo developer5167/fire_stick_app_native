@@ -11,10 +11,10 @@ import com.hording.fire_stick_app_native.models.MainAdsModel
 import com.hording.fire_stick_app_native.repository.DeviceDetailsRepository
 import com.hording.fire_stick_app_native.repository.FetchAdsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,13 +23,12 @@ import javax.inject.Inject
 class AdsPlayViewModel @Inject constructor(
     private val fetchAdsRepository: FetchAdsRepository,
     private val deviceDetailsRepository: DeviceDetailsRepository,
-    private val webSocketManager: WebSocketManager) : ViewModel() {
-    private  val _currentStatus = MutableStateFlow<SocketListenerStatus>(SocketListenerStatus.ActiveMode)
-    val socketStatus = _currentStatus
-    init {
-        connectSocket();
-        observeStatusUpdates()
-    }
+    private val webSocketManager: WebSocketManager
+) : ViewModel() {
+
+    private val _currentStatus = MutableStateFlow<SocketListenerStatus>(SocketListenerStatus.Loading)
+    val socketStatus: StateFlow<SocketListenerStatus> = _currentStatus.asStateFlow()
+
     init {
         connectSocket()
         observeStatusUpdates()
@@ -39,31 +38,28 @@ class AdsPlayViewModel @Inject constructor(
         viewModelScope.launch {
             val deviceId = deviceDetailsRepository.deviceId.first()
             val token = deviceDetailsRepository.token.first()
-            webSocketManager.connect(
-                Constants.BASE_URL_,
-                deviceId,
-                token
-            )
+            if (deviceId.isNotEmpty() && token.isNotEmpty()) {
+                webSocketManager.connect(
+                    Constants.BASE_URL_,
+                    deviceId,
+                    token
+                )
+            }
         }
     }
 
     private fun observeStatusUpdates() {
         viewModelScope.launch {
             webSocketManager.statusFlow.collect { status ->
-                println("DEVICE STATUS → $status")
-                when(status){
-                    "emergency-mode"->{
-                        _currentStatus.value = SocketListenerStatus.EmergencyMode
-                    }
-                    "maintenance"->{
-                        _currentStatus.value = SocketListenerStatus.MaintenanceMode
-                    }
-                    "offline"->{
-                        _currentStatus.value = SocketListenerStatus.OfflineMode
-                    }
-                    "active"->{
-                        _currentStatus.value = SocketListenerStatus.ActiveMode
-                    }
+                println("📱 VIEWMODEL OBSERVED STATUS → $status")
+                _currentStatus.value = when (status) {
+                    "emergency-mode" -> SocketListenerStatus.EmergencyMode
+                    "maintenance" -> SocketListenerStatus.MaintenanceMode
+                    "offline" -> SocketListenerStatus.OfflineMode
+                    "active" -> SocketListenerStatus.ActiveMode
+                    "blocked" -> SocketListenerStatus.Blocked
+                    "loading" -> SocketListenerStatus.Loading
+                    else -> SocketListenerStatus.ActiveMode // Default fallback
                 }
             }
         }
@@ -82,13 +78,14 @@ class AdsPlayViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             _mainAds.value = ApiResponse.Loading
             try {
-                val deviceId =  deviceDetailsRepository.deviceId.first()
+                val deviceId = deviceDetailsRepository.deviceId.first()
                 _mainAds.value = ApiResponse.Success(fetchAdsRepository.fetchMainAds(deviceId))
             } catch (e: Exception) {
                 _mainAds.value = ApiResponse.Error(message = e.message.toString())
             }
         }
     }
+
     fun fetchCompanyAds() {
         viewModelScope.launch(Dispatchers.IO) {
             _companyAds.value = ApiResponse.Loading
@@ -99,11 +96,12 @@ class AdsPlayViewModel @Inject constructor(
             }
         }
     }
-   fun fetchEmergencyAds() {
+
+    fun fetchEmergencyAds() {
         viewModelScope.launch(Dispatchers.IO) {
             _emergencyAds.value = ApiResponse.Loading
             try {
-                val deviceId =  deviceDetailsRepository.deviceId.first()
+                val deviceId = deviceDetailsRepository.deviceId.first()
                 _emergencyAds.value = ApiResponse.Success(fetchAdsRepository.fetchEmergencyAds(deviceId))
             } catch (e: Exception) {
                 _emergencyAds.value = ApiResponse.Error(message = e.message.toString())
