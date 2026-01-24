@@ -6,6 +6,7 @@ import com.hording.fire_stick_app_native.ApiResponse
 import com.hording.fire_stick_app_native.Constants
 import com.hording.fire_stick_app_native.SocketListenerStatus
 import com.hording.fire_stick_app_native.WebSocketManager
+import com.hording.fire_stick_app_native.models.AdStatisticsRequest
 import com.hording.fire_stick_app_native.models.AdsModel
 import com.hording.fire_stick_app_native.models.MainAdsModel
 import com.hording.fire_stick_app_native.repository.DeviceDetailsRepository
@@ -13,8 +14,6 @@ import com.hording.fire_stick_app_native.repository.FetchAdsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,9 +24,8 @@ class AdsPlayViewModel @Inject constructor(
     private val deviceDetailsRepository: DeviceDetailsRepository,
     private val webSocketManager: WebSocketManager
 ) : ViewModel() {
-
     private val _currentStatus = MutableStateFlow<SocketListenerStatus>(SocketListenerStatus.Loading)
-    val socketStatus: StateFlow<SocketListenerStatus> = _currentStatus.asStateFlow()
+    val socketStatus = _currentStatus
 
     init {
         connectSocket()
@@ -38,28 +36,34 @@ class AdsPlayViewModel @Inject constructor(
         viewModelScope.launch {
             val deviceId = deviceDetailsRepository.deviceId.first()
             val token = deviceDetailsRepository.token.first()
-            if (deviceId.isNotEmpty() && token.isNotEmpty()) {
-                webSocketManager.connect(
-                    Constants.BASE_URL_,
-                    deviceId,
-                    token
-                )
-            }
+            webSocketManager.connect(
+                Constants.BASE_URL_,
+                deviceId,
+                token
+            )
         }
     }
 
     private fun observeStatusUpdates() {
         viewModelScope.launch {
             webSocketManager.statusFlow.collect { status ->
-                println("📱 VIEWMODEL OBSERVED STATUS → $status")
-                _currentStatus.value = when (status) {
-                    "emergency-mode" -> SocketListenerStatus.EmergencyMode
-                    "maintenance" -> SocketListenerStatus.MaintenanceMode
-                    "offline" -> SocketListenerStatus.OfflineMode
-                    "active" -> SocketListenerStatus.ActiveMode
-                    "blocked" -> SocketListenerStatus.Blocked
-                    "loading" -> SocketListenerStatus.Loading
-                    else -> SocketListenerStatus.ActiveMode // Default fallback
+                println("DEVICE STATUS → $status")
+                when (status) {
+                    "emergency-mode" -> {
+                        _currentStatus.value = SocketListenerStatus.EmergencyMode
+                    }
+                    "maintenance" -> {
+                        _currentStatus.value = SocketListenerStatus.MaintenanceMode
+                    }
+                    "offline" -> {
+                        _currentStatus.value = SocketListenerStatus.OfflineMode
+                    }
+                    "active" -> {
+                        _currentStatus.value = SocketListenerStatus.ActiveMode
+                    }
+                    "blocked" -> {
+                        _currentStatus.value = SocketListenerStatus.Blocked
+                    }
                 }
             }
         }
@@ -105,6 +109,24 @@ class AdsPlayViewModel @Inject constructor(
                 _emergencyAds.value = ApiResponse.Success(fetchAdsRepository.fetchEmergencyAds(deviceId))
             } catch (e: Exception) {
                 _emergencyAds.value = ApiResponse.Error(message = e.message.toString())
+            }
+        }
+    }
+
+    fun recordAdStatistics(adId: String, durationPlayed: Int? = 0, location: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val deviceId = deviceDetailsRepository.deviceId.first()
+                val request = AdStatisticsRequest(
+                    adId = adId,
+                    deviceId = deviceId,
+                    location = location,
+                    durationPlayed = durationPlayed
+                )
+                val response = fetchAdsRepository.postAdStatistics(request)
+                println("Ad Statistics recorded: ${response.message}, ID: ${response.id}")
+            } catch (e: Exception) {
+                println("Failed to record ad statistics: ${e.message}")
             }
         }
     }

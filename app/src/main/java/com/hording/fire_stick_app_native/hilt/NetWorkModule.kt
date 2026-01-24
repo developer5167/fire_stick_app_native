@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.hording.fire_stick_app_native.Constants
-import com.hording.fire_stick_app_native.WebSocketManager
+import com.hording.fire_stick_app_native.HeartbeatManager
 import com.hording.fire_stick_app_native.netWork.ApiService
 import com.hording.fire_stick_app_native.netWork.AuthInterceptor
 import com.hording.fire_stick_app_native.repository.DeviceDetailsRepository
@@ -45,9 +45,7 @@ object NetWorkModule {
     fun getRetrofit(okHttpClient: OkHttpClient): Retrofit {
         val retrofit = lazy {
             Retrofit.Builder().baseUrl(Constants.BASE_URL_)
-                .addConverterFactory(GsonConverterFactory.create())
-                .client(okHttpClient)
-                .build()
+                .addConverterFactory(GsonConverterFactory.create()).client(okHttpClient).build()
         }
         return retrofit.value
     }
@@ -62,41 +60,48 @@ object NetWorkModule {
     @Singleton
     fun getInterceptors(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
-          level=  HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BODY
         }
     }
 
     @Provides
     @Singleton
     fun getOkhttpClient(
-        loggingInterceptor: HttpLoggingInterceptor,
-        authInterceptor: AuthInterceptor
+        loggingInterceptor: HttpLoggingInterceptor, authInterceptor: AuthInterceptor
     ): OkHttpClient {
-        return OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor)
-            .addInterceptor(authInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
+        return OkHttpClient.Builder().addInterceptor(loggingInterceptor)
+            .addInterceptor(authInterceptor).connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS).writeTimeout(30, TimeUnit.SECONDS).build()
 
     }
+
     @Provides
     @Singleton
-    fun getWebSocketManager(fetchAdsRepository: FetchAdsRepository, deviceDetailsRepository: DeviceDetailsRepository): WebSocketManager {
-        return WebSocketManager(fetchAdsRepository = fetchAdsRepository, deviceDetailsRepository =deviceDetailsRepository )
-    }
-    @Provides
-    @Singleton
-    fun getAdsRepository(apiService: ApiService): FetchAdsRepository {
-        return FetchAdsRepository(apiService = apiService )
-    }
-    @Provides
-    @Singleton
-    fun getDeviceDetailsRepository(dataStore: DataStore<Preferences>): DeviceDetailsRepository {
-        return DeviceDetailsRepository(dataStore = dataStore )
+    fun getHeartBeatManager(
+        fetchAdsRepository: FetchAdsRepository,
+        deviceDetailsRepository: DeviceDetailsRepository,
+    ): HeartbeatManager {
+        return HeartbeatManager(fetchAdsRepository, deviceDetailsRepository)
+
     }
 
+    @Provides
+    @Singleton
+    fun fetchAdsRepository(
+        apiService: ApiService,
+    ): FetchAdsRepository {
+        return FetchAdsRepository(apiService)
+
+    }
+
+    @Provides
+    @Singleton
+    fun fetchDeviceDetailsRepository(
+        dataStore: DataStore<Preferences>,
+    ): DeviceDetailsRepository {
+        return DeviceDetailsRepository(dataStore)
+
+    }
 
 
 }

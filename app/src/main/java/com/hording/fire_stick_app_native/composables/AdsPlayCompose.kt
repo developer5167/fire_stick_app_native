@@ -16,39 +16,47 @@ fun AdsPlayCompose(adsPlayViewModel: AdsPlayViewModel = hiltViewModel()) {
 
     println("STATE>>>:  ${status.value}")
 
-    LaunchedEffect(status.value) {
+    LaunchedEffect(Unit) {
         adsPlayViewModel.fetchMainAds()
         adsPlayViewModel.fetchCompanyAds()
         adsPlayViewModel.fetchEmergencyAds()
     }
-    when (status.value) {
 
+    when (status.value) {
         SocketListenerStatus.EmergencyMode -> {
             println("STATE>>>:  ${status.value}  ${emergencyAds.value}")
-            EmergencyAdsHandler(emergencyAds)
+            EmergencyAdsHandler(
+                emergencyAds = emergencyAds,
+                onAdPlayed = { ad ->
+//                    if (isMainAd) {
+//                        adsPlayViewModel.recordAdStatistics(ad.id)
+//                    }
+                }
+            )
         }
-
         SocketListenerStatus.MaintenanceMode -> {
             StatusTextScreen("Device under maintenance")
         }
-
         SocketListenerStatus.OfflineMode -> {
             StatusTextScreen("Device is offline")
-        }
-
-        SocketListenerStatus.Blocked -> {
-            StatusTextScreen("Account is Blocked")
         }
         SocketListenerStatus.ActiveMode -> {
             ActiveAdsHandler(
                 mainAdsState = mainAdsState.value,
                 companyAdsState = companyAdsState.value,
-                onFetchMainAds = { adsPlayViewModel.fetchMainAds() }
+                onFetchMainAds = { adsPlayViewModel.fetchMainAds() },
+                onAdPlayed = { ad, isMainAd ->
+                    if (isMainAd) {
+                        adsPlayViewModel.recordAdStatistics(ad.id)
+                    }
+                }
             )
         }
-
         SocketListenerStatus.Loading -> {
             LoadingScreen()
+        }
+        SocketListenerStatus.Blocked -> {
+            StatusTextScreen("Device is blocked")
         }
     }
 }

@@ -8,10 +8,10 @@ sealed class ApiResponse<out T> {
 }
 
 sealed class SocketListenerStatus {
-    object Loading : SocketListenerStatus()
     object MaintenanceMode : SocketListenerStatus()
     object EmergencyMode : SocketListenerStatus()
     object OfflineMode : SocketListenerStatus()
     object ActiveMode : SocketListenerStatus()
+    object Loading : SocketListenerStatus()
     object Blocked : SocketListenerStatus()
 }

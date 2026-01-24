@@ -1,5 +1,6 @@
 package com.hording.fire_stick_app_native
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hording.fire_stick_app_native.repository.DeviceDetailsRepository
 import com.hording.fire_stick_app_native.repository.FetchAdsRepository
 import io.socket.client.IO
@@ -13,43 +14,30 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import javax.inject.Inject
 
-class WebSocketManager @Inject constructor(
-    private val fetchAdsRepository: FetchAdsRepository,
-    private val deviceDetailsRepository: DeviceDetailsRepository
-) {
+class WebSocketManager @Inject constructor(private  val fetchAdsRepository: FetchAdsRepository,private val deviceDetailsRepository: DeviceDetailsRepository) {
 
     private lateinit var socket: Socket
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // Initialized to "loading" to allow UI to differentiate between initial state and fetched state
-    private val _statusFlow = MutableStateFlow("loading")
+    private val _statusFlow = MutableStateFlow("active")
     val statusFlow = _statusFlow.asStateFlow()
+
 
     init {
         fetchInitialStatus()
     }
-
-    fun fetchInitialStatus() {
+    fun fetchInitialStatus(){
         scope.launch {
-            try {
-                val deviceId = deviceDetailsRepository.deviceId.first()
-                if (deviceId.isNotEmpty()) {
-                    val status = fetchAdsRepository.fetchStatus(deviceId)
-                    println("📥 INITIAL STATUS FETCHED → ${status.status}")
-                    _statusFlow.value = status.status
-                } else {
-                    println("⚠️ DEVICE ID IS EMPTY, SKIPPING INITIAL STATUS FETCH")
-                }
-            } catch (e: Exception) {
-                println("❌ INITIAL STATUS FETCH ERROR → ${e.message}")
-            }
+            val device = deviceDetailsRepository.deviceId.first()
+            val status = fetchAdsRepository.fetchStatus(device)
+            _statusFlow.value = status.status
         }
     }
 
-    fun connect(url: String, deviceId: String, token: String) {
+    fun connect(url: String, deviceId: String,token: String) {
         val opts = IO.Options()
         opts.query = "token=$token"
-        socket = IO.socket(url, opts)
+        socket = IO.socket(url,opts)
 
         socket.on(Socket.EVENT_CONNECT) {
             println("🟢 Socket.IO connected")
@@ -61,9 +49,11 @@ class WebSocketManager @Inject constructor(
                 val data = args[0] as JSONObject
                 val status = data.getString("status")
 
-                println("📥 DEVICE STATUS FROM SOCKET → $status")
+                println("📥 DEVICE STATUS → $status")
 
-                _statusFlow.value = status
+                scope.launch {
+                    _statusFlow.emit(status)
+                }
             } catch (e: Exception) {
                 println("❌ SOCKET PARSE ERROR → ${e.message}")
             }
@@ -74,6 +64,7 @@ class WebSocketManager @Inject constructor(
         }
 
         socket.on(Socket.EVENT_CONNECT_ERROR) {
+
             println("❌ Socket.IO connection error")
         }
 

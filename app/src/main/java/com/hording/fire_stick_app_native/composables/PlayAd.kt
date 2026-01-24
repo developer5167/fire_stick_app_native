@@ -3,20 +3,21 @@ package com.hording.fire_stick_app_native.composables
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hording.fire_stick_app_native.models.Data
-import okhttp3.OkHttpClient
-
 
 @Composable
-fun PlayAd(ad: Data) {
+fun PlayAd(ad: Data, onAdPlayed: (Data) -> Unit = {}) {
     val context = LocalContext.current
 
+    LaunchedEffect(ad.id) {
+        onAdPlayed(ad)
+    }
 
     when (ad.media_type.lowercase()) {
         "image", "img", "photo" -> {
@@ -29,7 +30,7 @@ fun PlayAd(ad: Data) {
 
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(url)      // use your final constructed URL
+                    .data(url)
                     .crossfade(true)
                     .listener(
                         onError = { request, error ->

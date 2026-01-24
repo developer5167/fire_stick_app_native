@@ -3,10 +3,10 @@ package com.hording.fire_stick_app_native.composables
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.hording.fire_stick_app_native.models.AdsModel
 import com.hording.fire_stick_app_native.models.Data
 import kotlinx.coroutines.delay
 
@@ -14,9 +14,10 @@ import kotlinx.coroutines.delay
 fun PlayMainAds(
     mainAds: List<Data>,
     companyAds: List<Data>,
-    onLoopCompleted: () -> Unit
+    onLoopCompleted: () -> Unit,
+    onAdPlayed: (Data, Boolean) -> Unit // Changed to (Data, isMainAd)
 ) {
-    var currentIndex by remember { mutableStateOf(0) }
+    var currentIndex by remember { mutableIntStateOf(0) }
     var showExtraCompanyAd by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentIndex) {
@@ -31,7 +32,7 @@ fun PlayMainAds(
 
     if (showExtraCompanyAd && companyAds.isNotEmpty()) {
         val randomAd = companyAds.random()
-        PlayAd(randomAd)
+        PlayAd(randomAd, onAdPlayed = { ad -> onAdPlayed(ad, false) }) // Company ad
         LaunchedEffect(Unit) {
             delay(10000)
             onLoopCompleted()
@@ -39,6 +40,6 @@ fun PlayMainAds(
             showExtraCompanyAd = false
         }
     } else {
-        PlayAd(mainAds[currentIndex])
+        PlayAd(mainAds[currentIndex], onAdPlayed = { ad -> onAdPlayed(ad, true) }) // Main ad
     }
 }
